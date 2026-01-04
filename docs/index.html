@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mouse Input Monitor documentation &#8212; Mouse Input Monitor  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Mouse Monitor" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mouse-input-monitor-documentation">
+<h1>Mouse Input Monitor documentation<a class="headerlink" href="#mouse-input-monitor-documentation" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Mouse Monitor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mouse_monitor_browserSource.html">mouse_monitor_browserSource module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">Frontend Monitor (mouse_monitor.html)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#html-structure">HTML Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#event-listeners">Event Listeners</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#inter-tab-communication-broadcastchannel">Inter-tab Communication (BroadcastChannel)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="listener.html">Event Listener (listener.html)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="listener.html#purpose">Purpose</a></li>
+<li class="toctree-l2"><a class="reference internal" href="listener.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="listener.html#technical-implementation">Technical Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="listener.html#developer-commentary">Developer Commentary</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="project-overview">
+<h1>Project Overview<a class="headerlink" href="#project-overview" title="Link to this heading">¶</a></h1>
+<p>The <strong>Mouse Input Monitor</strong> is a tool designed to visualize mouse interactions within OBS Studio. It consists of a Python script that runs within OBS and an HTML/JavaScript frontend that displays the captured events.</p>
+<section id="functionality">
+<h2>Functionality<a class="headerlink" href="#functionality" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Python Script (`mouse_monitor_browserSource.py`):</strong>
+- Uses the <cite>pynput</cite> library to listen for global mouse events (clicks, movement, scrolling).
+- Integrates with the OBS Studio API (<cite>obspython</cite>) to create a script interface.
+- Allows users to select specific OBS Browser Sources to receive event data.
+- Dispatches custom <cite>javascript_event</cite> calls to the selected Browser Sources containing event details (coordinates, button state, scroll delta).</p></li>
+<li><p><strong>Frontend (`mouse_monitor.html`):</strong>
+- A styled HTML page intended to be loaded as a Browser Source in OBS.
+- Listens for the custom events dispatched by the Python script.
+- Parses the event data and updates the UI in real-time.
+- Visualizes clicks with button indicators, movement with coordinate displays, and scroll actions.</p></li>
+</ol>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Load <cite>mouse_monitor.html</cite> as a Browser Source in your OBS scene.</p></li>
+<li><p>Load the <cite>mouse_monitor_browserSource.py</cite> script in the OBS Scripts window.</p></li>
+<li><p>Configure the script to target your created Browser Source.</p></li>
+<li><p>Enable the monitoring toggles to start visualizing input.</p></li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Mouse Input Monitor</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Mouse Monitor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">Frontend Monitor (mouse_monitor.html)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="listener.html">Event Listener (listener.html)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="modules.html" title="next chapter">Mouse Monitor</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Jon Wood.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

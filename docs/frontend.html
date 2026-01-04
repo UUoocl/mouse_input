@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Frontend Monitor (mouse_monitor.html) &#8212; Mouse Input Monitor  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Event Listener (listener.html)" href="listener.html" />
+    <link rel="prev" title="mouse_monitor_browserSource module" href="mouse_monitor_browserSource.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="frontend-monitor-mouse-monitor-html">
+<h1>Frontend Monitor (mouse_monitor.html)<a class="headerlink" href="#frontend-monitor-mouse-monitor-html" title="Link to this heading">¶</a></h1>
+<p>The frontend component is a standalone HTML page designed to be used as an OBS Browser Source. It serves two primary purposes:
+1. <strong>Visualization</strong>: Providing real-time visual feedback of mouse actions.
+2. <strong>Relay</strong>: Broadcasting event data to other browser contexts via the <code class="docutils literal notranslate"><span class="pre">BroadcastChannel</span></code> API.</p>
+<section id="html-structure">
+<h2>HTML Structure<a class="headerlink" href="#html-structure" title="Link to this heading">¶</a></h2>
+<p>The UI is organized into three “cards,” each dedicated to a specific mouse event type:</p>
+<ul class="simple">
+<li><p><strong>Mouse Click Card</strong> (<code class="docutils literal notranslate"><span class="pre">#click-card</span></code>): Displays the button pressed (MB1, MB2, MB3), the coordinates, and the current state (DOWN/UP).</p></li>
+<li><p><strong>Mouse Position Card</strong> (<code class="docutils literal notranslate"><span class="pre">#move-card</span></code>): Displays the live X and Y coordinates of the cursor.</p></li>
+<li><p><strong>Mouse Scroll Card</strong> (<code class="docutils literal notranslate"><span class="pre">#scroll-card</span></code>): Displays the scroll delta (dx, dy) and the cursor position during the scroll.</p></li>
+</ul>
+</section>
+<section id="event-listeners">
+<h2>Event Listeners<a class="headerlink" href="#event-listeners" title="Link to this heading">¶</a></h2>
+<p>The page listens for custom DOM events dispatched by the OBS environment (via the Python script).</p>
+<section id="mouseclick">
+<h3>MouseClick<a class="headerlink" href="#mouseclick" title="Link to this heading">¶</a></h3>
+<p>Triggered when a mouse button is pressed or released.
+*   <strong>Data Source</strong>: <code class="docutils literal notranslate"><span class="pre">event.detail</span></code>
+*   <strong>Logic</strong>: Updates the click card and flashes the border red.</p>
+</section>
+<section id="mousemove">
+<h3>MouseMove<a class="headerlink" href="#mousemove" title="Link to this heading">¶</a></h3>
+<p>Triggered on every pixel movement of the mouse.
+*   <strong>Data Source</strong>: <code class="docutils literal notranslate"><span class="pre">event.detail</span></code>
+*   <strong>Logic</strong>: Updates the coordinate display. To maintain performance and reduce visual noise, this card does not flash on update.</p>
+</section>
+<section id="mousescroll">
+<h3>MouseScroll<a class="headerlink" href="#mousescroll" title="Link to this heading">¶</a></h3>
+<p>Triggered when the scroll wheel is moved.
+*   <strong>Data Source</strong>: <code class="docutils literal notranslate"><span class="pre">event.detail</span></code>
+*   <strong>Logic</strong>: Updates the delta values and flashes the border green.</p>
+</section>
+</section>
+<section id="inter-tab-communication-broadcastchannel">
+<h2>Inter-tab Communication (BroadcastChannel)<a class="headerlink" href="#inter-tab-communication-broadcastchannel" title="Link to this heading">¶</a></h2>
+<p>To allow other overlays or tools to react to mouse input without being direct OBS Browser Sources, this page implements the <code class="docutils literal notranslate"><span class="pre">BroadcastChannel</span></code> API.</p>
+<p>When an event is received, the data is posted to one of the following channels:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mouse_click</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mouse_move</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mouse_scroll</span></code></p></li>
+</ul>
+<p><strong>Example Usage in another page:</strong></p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">clickChannel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">BroadcastChannel</span><span class="p">(</span><span class="s1">&#39;mouse_click&#39;</span><span class="p">);</span>
+<span class="nx">clickChannel</span><span class="p">.</span><span class="nx">onmessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Click detected at:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">y</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Mouse Input Monitor</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Mouse Monitor</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Frontend Monitor (mouse_monitor.html)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#html-structure">HTML Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#event-listeners">Event Listeners</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inter-tab-communication-broadcastchannel">Inter-tab Communication (BroadcastChannel)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="listener.html">Event Listener (listener.html)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="mouse_monitor_browserSource.html" title="previous chapter">mouse_monitor_browserSource module</a></li>
+      <li>Next: <a href="listener.html" title="next chapter">Event Listener (listener.html)</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Jon Wood.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/frontend.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

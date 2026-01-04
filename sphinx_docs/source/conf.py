@@ -30,6 +30,7 @@ author = 'Jon Wood'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'sphinx.ext.githubpages',
 ]
 
 templates_path = ['_templates']
