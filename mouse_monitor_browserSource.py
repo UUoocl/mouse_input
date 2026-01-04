@@ -2,6 +2,19 @@ import obspython as obs
 from pynput import mouse
 import json
 
+"""
+Mouse Monitor Browser Source Script for OBS Studio
+==================================================
+
+This script monitors global mouse events (clicks, movement, and scrolling) and sends these events 
+to a specified OBS Browser Source via JavaScript events. This allows for real-time visualization 
+of mouse activity within an OBS scene.
+
+Dependencies:
+    - obspython (OBS Studio Python API)
+    - pynput (Mouse monitoring)
+"""
+
 script_settings = None  # OBS settings
 
 click_source_name = ""
@@ -18,6 +31,15 @@ DEFAULT_SOURCE_NAME = ""
 
 
 def on_click(x, y, button, pressed):
+    """
+    Callback function for mouse click events.
+
+    Args:
+        x (int): The x-coordinate of the mouse cursor.
+        y (int): The y-coordinate of the mouse cursor.
+        button (pynput.mouse.Button): The button that was clicked.
+        pressed (bool): True if the button was pressed, False if released.
+    """
     if pressed:
         btn_code = ""
         if button == mouse.Button.left:
@@ -38,6 +60,13 @@ def on_click(x, y, button, pressed):
 
 
 def on_move(x, y):
+    """
+    Callback function for mouse movement events.
+
+    Args:
+        x (int): The new x-coordinate of the mouse cursor.
+        y (int): The new y-coordinate of the mouse cursor.
+    """
     data = {
         "x": int(x),
         "y": int(y)
@@ -46,6 +75,15 @@ def on_move(x, y):
 
 
 def on_scroll(x, y, dx, dy):
+    """
+    Callback function for mouse scroll events.
+
+    Args:
+        x (int): The x-coordinate of the mouse cursor.
+        y (int): The y-coordinate of the mouse cursor.
+        dx (int): The horizontal scroll delta.
+        dy (int): The vertical scroll delta.
+    """
     data = {
         "x": int(x),
         "y": int(y),
@@ -56,6 +94,14 @@ def on_scroll(x, y, dx, dy):
 
 
 def update_browser_source(source_name, event_name, data):
+    """
+    Sends a custom JavaScript event to a specified OBS Browser Source.
+
+    Args:
+        source_name (str): The name of the OBS Browser Source.
+        event_name (str): The name of the custom event (e.g., "MouseClick").
+        data (dict): The data payload to send with the event.
+    """
     source = obs.obs_get_source_by_name(source_name)
     if source is not None:
         cd = obs.calldata_create()
@@ -67,14 +113,32 @@ def update_browser_source(source_name, event_name, data):
 
 
 def script_description():
+    """
+    Returns the description of the script for the OBS script window.
+
+    Returns:
+        str: Script description.
+    """
     return "Monitors mouse clicks and sends events to a browser source."
 
 
 def script_defaults(settings):
+    """
+    Sets the default values for the script settings.
+
+    Args:
+        settings (obspython.obs_data_t): The settings data object.
+    """
     obs.obs_data_set_default_string(settings, "click_source_name", DEFAULT_SOURCE_NAME)
     
 
 def script_properties():
+    """
+    Defines the properties (UI elements) for the script in OBS.
+
+    Returns:
+        obspython.obs_properties_t: The properties object.
+    """
     props = obs.obs_properties_create()
     
     bool_click = obs.obs_properties_add_bool(props, "click_bool", "monitor mouse clicks")
@@ -125,6 +189,14 @@ def script_properties():
 
 
 def script_load(settings):
+    """
+    Called when the script is loaded or settings are reset.
+
+    Starts the mouse listeners based on the provided settings.
+
+    Args:
+        settings (obspython.obs_data_t): The settings data object.
+    """
     global click_monitor, click_source_name, position_monitor, position_source_name, scroll_monitor, scroll_source_name, script_settings
     print("loading mouse script")
     script_settings = settings  # Store OBS settings
@@ -161,6 +233,11 @@ def script_load(settings):
     
 
 def script_unload():
+    """
+    Called when the script is unloaded.
+
+    Stops all active mouse listeners.
+    """
     global click_monitor, position_monitor, scroll_monitor
         
     if click_monitor:
@@ -177,4 +254,12 @@ def script_unload():
     
 
 def script_update(settings):
+    """
+    Called when the script settings are updated.
+
+    Reloads the script with the new settings.
+
+    Args:
+        settings (obspython.obs_data_t): The settings data object.
+    """
     script_load(settings)

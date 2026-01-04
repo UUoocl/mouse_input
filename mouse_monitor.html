@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mouse Monitor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars for overlay use */
+        }
+        .card {
+            background-color: #252526;
+            border-left: 5px solid #007acc;
+            border-radius: 3px;
+            padding: 10px 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background-color 0.2s;
+        }
+        .card.active {
+            background-color: #37373d;
+        }
+        .header {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #808080;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .content {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.1em;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 5px;
+        }
+        .data-point {
+            display: flex;
+            flex-direction: column;
+        }
+        .label {
+            font-size: 0.8em;
+            color: #569cd6;
+        }
+        .value {
+            color: #ce9178;
+        }
+        /* Specific border colors for different events */
+        #click-card { border-left-color: #f44336; }
+        #move-card { border-left-color: #2196f3; }
+        #scroll-card { border-left-color: #4caf50; }
+    </style>
+</head>
+<body>
+    <div class="card" id="click-card">
+        <div class="header">
+            <span>Mouse Click</span>
+            <span id="click-status"></span>
+        </div>
+        <div class="content" id="click-content">Waiting for input...</div>
+    </div>
+
+    <div class="card" id="move-card">
+        <div class="header">Mouse Position</div>
+        <div class="content" id="move-content">Waiting for input...</div>
+    </div>
+
+    <div class="card" id="scroll-card">
+        <div class="header">Mouse Scroll</div>
+        <div class="content" id="scroll-content">Waiting for input...</div>
+    </div>
+
+    <script>
+        // Create broadcast channels for each monitor type
+        const clickChannel = new BroadcastChannel('mouse_click');
+        const moveChannel = new BroadcastChannel('mouse_move');
+        const scrollChannel = new BroadcastChannel('mouse_scroll');
+
+        function setContent(elementId, html) {
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function createDataPoint(label, value) {
+            return `
+                <div class="data-point">
+                    <span class="label">${label}</span>
+                    <span class="value">${value}</span>
+                </div>`;
+        }
+
+        function flashCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.classList.remove('active');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('active');
+            setTimeout(() => card.classList.remove('active'), 200);
+        }
+
+        window.addEventListener('MouseClick', (event) => {
+            try {
+                // Broadcast the event data
+                clickChannel.postMessage(event.detail);
+
+                const { button, pressed, x, y } = event.detail;
+                
+                let html = createDataPoint('button', button);
+                html += createDataPoint('pos', `${x}, ${y}`);
+                
+                setContent('click-content', html);
+                flashCard('click-card');
+                
+                const status = document.getElementById('click-status');
+                status.textContent = pressed ? "DOWN" : "UP";
+                status.style.color = pressed ? "#f44336" : "#808080";
+            } catch (e) {
+                console.error('Error handling MouseClick', e);
+            }
+        });
+
+        window.addEventListener('MouseMove', (event) => {
+            try {
+                // Broadcast the event data
+                moveChannel.postMessage(event.detail);
+
+                const { x, y } = event.detail;
+                setContent('move-content', createDataPoint('coordinates', `${x}, ${y}`));
+            } catch (e) {
+                console.error('Error handling MouseMove', e);
+            }
+        });
+
+        window.addEventListener('MouseScroll', (event) => {
+            try {
+                // Broadcast the event data
+                scrollChannel.postMessage(event.detail);
+
+                const { x, y, dx, dy } = event.detail;
+                
+                let html = createDataPoint('delta', `${dx}, ${dy}`);
+                html += createDataPoint('at', `${x}, ${y}`);
+                
+                setContent('scroll-content', html);
+                flashCard('scroll-card');
+            } catch (e) {
+                console.error('Error handling MouseScroll', e);
+            }
+        });
+    </script>
+</body>
+</html>
