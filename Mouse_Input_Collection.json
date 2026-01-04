@@ -6,7 +6,7 @@
             "name": "Scene"
         }
     ],
-    "name": "python_mouse_input_obs_collection",
+    "name": "python_mouse_input",
     "groups": [],
     "quick_transitions": [
         {
@@ -264,12 +264,12 @@
             {
                 "path": "/Users/jonwood/Documents/myGithub/mouse_input/mouse_monitor_browserSource.py",
                 "settings": {
-                    "click_source_name": "Browser Mouse Input",
                     "position_source_name": "Browser Mouse Input",
                     "scroll_source_name": "Browser Mouse Input",
                     "click_bool": true,
                     "position_bool": true,
-                    "scroll_bool": true
+                    "scroll_bool": true,
+                    "click_source_name": "Browser Mouse Input"
                 }
             }
         ],
@@ -302,7 +302,7 @@
             "versioned_id": "browser_source",
             "settings": {
                 "is_local_file": true,
-                "local_file": "/Users/jonwood/Documents/myGithub/mouse_input/listener.html",
+                "local_file": "/Users/jonwood/Documents/myGithub/python_mouse_input/mouse_listener.html",
                 "width": 1920,
                 "height": 800
             },
@@ -336,9 +336,9 @@
             "id": "browser_source",
             "versioned_id": "browser_source",
             "settings": {
-                "url": "http://localhost:8080/mouse_input/mouse_monitor.html",
                 "is_local_file": true,
-                "local_file": "/Users/jonwood/Documents/myGithub/mouse_input/mouse_monitor.html"
+                "local_file": "/Users/jonwood/Documents/myGithub/python_mouse_input/mouse_monitor.html",
+                "url": "http://localhost:8080/mouse_input/mouse_monitor.html"
             },
             "mixers": 255,
             "sync": 0,
