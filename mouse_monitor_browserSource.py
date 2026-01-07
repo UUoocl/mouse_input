@@ -1,7 +1,7 @@
 import obspython as obs
 from pynput import mouse
 import json
-from threading import Timer
+import threading
 
 """
 Mouse Monitor Browser Source Script for OBS Studio
@@ -16,32 +16,37 @@ Dependencies:
     - pynput (Mouse monitoring)
 """
 
-script_settings = None  # OBS settings
+# Globals
+script_settings = None
+event_lock = threading.Lock()
 
+# Click State
 click_source_name = ""
 click_monitor = None
+pending_clicks = []
 
+# Position State
 position_source_name = ""
 position_monitor = None
+pending_move = None
 
+# Scroll State
 scroll_source_name = ""
 scroll_monitor = None
-scroll_timer = None
+# dx/dy are floats to support smooth decay
+scroll_state = {"x": 0, "y": 0, "dx": 0.0, "dy": 0.0}
 
 # Defaults
 DEFAULT_SOURCE_NAME = ""
 
 
-def on_click(x, y, button, pressed):
-    """
-    Callback function for mouse click events.
+# ---------------------------------------------------------------------------
+# Background Thread Callbacks (pynput)
+# ---------------------------------------------------------------------------
+# These run in a separate thread. MUST NOT call OBS API functions directly.
+# They only update shared state protected by event_lock.
 
-    Args:
-        x (int): The x-coordinate of the mouse cursor.
-        y (int): The y-coordinate of the mouse cursor.
-        button (pynput.mouse.Button): The button that was clicked.
-        pressed (bool): True if the button was pressed, False if released.
-    """
+def on_click(x, y, button, pressed):
     if pressed:
         btn_code = ""
         if button == mouse.Button.left:
@@ -58,83 +63,41 @@ def on_click(x, y, button, pressed):
                 "y": int(y),
                 "pressed": pressed
             }
-            update_browser_source(click_source_name, "MouseClick", data)
+            with event_lock:
+                pending_clicks.append(data)
 
 
 def on_move(x, y):
-    """
-    Callback function for mouse movement events.
-
-    Args:
-        x (int): The new x-coordinate of the mouse cursor.
-        y (int): The new y-coordinate of the mouse cursor.
-    """
     data = {
         "x": int(x),
         "y": int(y)
     }
-    update_browser_source(position_source_name, "MouseMove", data)
-
-
-def reset_scroll(x, y, dx, dy):
-    """
-    Resets the scroll values to 0 with smoothing.
-    """
-    global scroll_timer
-    
-    smoothing_factor = 0.9
-    new_dx = int(dx * smoothing_factor)
-    new_dy = int(dy * smoothing_factor)
-
-    data = {
-        "x": int(x),
-        "y": int(y),
-        "dx": new_dx,
-        "dy": new_dy
-    }
-    update_browser_source(scroll_source_name, "MouseScroll", data)
-
-    if new_dx != 0 or new_dy != 0:
-        scroll_timer = Timer(0.05, reset_scroll, [x, y, new_dx, new_dy])
-        scroll_timer.start()
+    with event_lock:
+        global pending_move
+        pending_move = data
 
 
 def on_scroll(x, y, dx, dy):
-    """
-    Callback function for mouse scroll events.
+    with event_lock:
+        scroll_state["x"] = int(x)
+        scroll_state["y"] = int(y)
+        # Accumulate deltas to capture fast scrolls between ticks
+        scroll_state["dx"] += dx
+        scroll_state["dy"] += dy
 
-    Args:
-        x (int): The x-coordinate of the mouse cursor.
-        y (int): The y-coordinate of the mouse cursor.
-        dx (int): The horizontal scroll delta.
-        dy (int): The vertical scroll delta.
-    """
-    global scroll_timer
-    
-    data = {
-        "x": int(x),
-        "y": int(y),
-        "dx": int(dx),
-        "dy": int(dy)
-    }
-    update_browser_source(scroll_source_name, "MouseScroll", data)
 
-    if scroll_timer:
-        scroll_timer.cancel()
-    
-    scroll_timer = Timer(0.1, reset_scroll, [x, y, dx, dy])
-    scroll_timer.start()
-
+# ---------------------------------------------------------------------------
+# Main Thread Logic (OBS)
+# ---------------------------------------------------------------------------
 
 def update_browser_source(source_name, event_name, data):
     """
     Sends a custom JavaScript event to a specified OBS Browser Source.
-
-    Args:
-        source_name (str): The name of the OBS Browser Source.
-        event_name (str): The name of the custom event (e.g., "MouseClick").
-        data (dict): The data payload to send with the event.
+    Must be called from the main thread.
     """
+    if not source_name:
+        return
+
     source = obs.obs_get_source_by_name(source_name)
     if source is not None:
         cd = obs.calldata_create()
@@ -145,37 +108,75 @@ def update_browser_source(source_name, event_name, data):
         obs.obs_source_release(source)
 
 
-def script_description():
+def timer_tick():
     """
-    Returns the description of the script for the OBS script window.
+    Periodic timer callback running on the main OBS thread.
+    Processes queued events and handles scroll decay.
+    """
+    global pending_move
+    
+    # 1. Process Clicks
+    clicks_to_send = []
+    with event_lock:
+        if pending_clicks:
+            clicks_to_send = pending_clicks[:]
+            pending_clicks.clear()
+            
+    for data in clicks_to_send:
+        update_browser_source(click_source_name, "MouseClick", data)
 
-    Returns:
-        str: Script description.
-    """
-    return "Monitors mouse clicks and sends events to a browser source."
+    # 2. Process Move
+    move_to_send = None
+    with event_lock:
+        if pending_move:
+            move_to_send = pending_move
+            pending_move = None
+            
+    if move_to_send:
+        update_browser_source(position_source_name, "MouseMove", move_to_send)
+
+    # 3. Process Scroll (with decay)
+    scroll_data = None
+    with event_lock:
+        # Check if we have significant scroll value
+        if abs(scroll_state["dx"]) > 0.1 or abs(scroll_state["dy"]) > 0.1:
+            # Prepare data to send
+            scroll_data = {
+                "x": scroll_state["x"],
+                "y": scroll_state["y"],
+                "dx": int(scroll_state["dx"]),
+                "dy": int(scroll_state["dy"])
+            }
+            
+            # Apply decay
+            scroll_state["dx"] *= 0.8
+            scroll_state["dy"] *= 0.8
+            
+            # Snap to zero if small
+            if abs(scroll_state["dx"]) < 0.5: scroll_state["dx"] = 0.0
+            if abs(scroll_state["dy"]) < 0.5: scroll_state["dy"] = 0.0
+    
+    if scroll_data:
+        update_browser_source(scroll_source_name, "MouseScroll", scroll_data)
+
+
+# ---------------------------------------------------------------------------
+# Script Settings & Lifecycle
+# ---------------------------------------------------------------------------
+
+def script_description():
+    return "Monitors mouse clicks, movement, and scroll. Sends events to a browser source. Safe threading implementation."
 
 
 def script_defaults(settings):
-    """
-    Sets the default values for the script settings.
-
-    Args:
-        settings (obspython.obs_data_t): The settings data object.
-    """
     obs.obs_data_set_default_string(settings, "click_source_name", DEFAULT_SOURCE_NAME)
     
 
 def script_properties():
-    """
-    Defines the properties (UI elements) for the script in OBS.
-
-    Returns:
-        obspython.obs_properties_t: The properties object.
-    """
     props = obs.obs_properties_create()
     
-    bool_click = obs.obs_properties_add_bool(props, "click_bool", "monitor mouse clicks")
-    obs.obs_property_set_long_description(bool_click, "Check to monitor mouse clicks, else uncheck")
+    # Click Settings
+    bool_click = obs.obs_properties_add_bool(props, "click_bool", "Monitor Mouse Clicks")
     click = obs.obs_properties_add_list(
         props,
         "click_source_name",
@@ -184,8 +185,8 @@ def script_properties():
         obs.OBS_COMBO_FORMAT_STRING
     )
 
-    bool_position = obs.obs_properties_add_bool(props, "position_bool", "monitor mouse position")
-    obs.obs_property_set_long_description(bool_position, "Check to monitor mouse position, else uncheck")
+    # Position Settings
+    bool_position = obs.obs_properties_add_bool(props, "position_bool", "Monitor Mouse Position")
     position = obs.obs_properties_add_list(
         props,
         "position_source_name",
@@ -194,8 +195,8 @@ def script_properties():
         obs.OBS_COMBO_FORMAT_STRING
     )
 
-    bool_scroll = obs.obs_properties_add_bool(props, "scroll_bool", "monitor mouse scroll")
-    obs.obs_property_set_long_description(bool_scroll, "Check to monitor mouse scroll, else uncheck")
+    # Scroll Settings
+    bool_scroll = obs.obs_properties_add_bool(props, "scroll_bool", "Monitor Mouse Scroll")
     scroll = obs.obs_properties_add_list(
         props,
         "scroll_source_name",
@@ -204,7 +205,7 @@ def script_properties():
         obs.OBS_COMBO_FORMAT_STRING
     )
 
-    # populate drop down lists of browser sources
+    # Populate Source Lists
     sources = obs.obs_enum_sources()
     if sources is not None:
         for source in sources:
@@ -222,81 +223,63 @@ def script_properties():
 
 
 def script_load(settings):
-    """
-    Called when the script is loaded or settings are reset.
-
-    Starts the mouse listeners based on the provided settings.
-
-    Args:
-        settings (obspython.obs_data_t): The settings data object.
-    """
     global click_monitor, click_source_name, position_monitor, position_source_name, scroll_monitor, scroll_source_name, script_settings
-    print("loading mouse script")
-    script_settings = settings  # Store OBS settings
+    
+    print("Loading mouse monitor script...")
+    script_settings = settings
 
     click_bool = obs.obs_data_get_bool(settings, "click_bool")
     position_bool = obs.obs_data_get_bool(settings, "position_bool")
     scroll_bool = obs.obs_data_get_bool(settings, "scroll_bool")
-    print(f"click boolean {click_bool}")
-    print(f"pos boolean {position_bool}")
-    print(f"scroll boolean {scroll_bool}")
 
-    # Stop existing monitors if they are running
-    if click_monitor:
-        click_monitor.stop()
-    if position_monitor:
-        position_monitor.stop()
-    if scroll_monitor:
-        scroll_monitor.stop()
+    # Stop existing monitors
+    stop_monitors()
 
+    # Start Monitors
     if click_bool:
         click_source_name = obs.obs_data_get_string(settings, "click_source_name")
         click_monitor = mouse.Listener(on_click=on_click)
         click_monitor.start()
+        print("Click monitor started.")
     
     if position_bool:
         position_source_name = obs.obs_data_get_string(settings, "position_source_name")
         position_monitor = mouse.Listener(on_move=on_move)
         position_monitor.start()
+        print("Position monitor started.")
 
     if scroll_bool:
         scroll_source_name = obs.obs_data_get_string(settings, "scroll_source_name")
         scroll_monitor = mouse.Listener(on_scroll=on_scroll)
         scroll_monitor.start()
-    
+        print("Scroll monitor started.")
+
+    # Start Main Loop Timer (50ms = 20 ticks/sec)
+    obs.timer_remove(timer_tick) # Ensure no duplicates
+    obs.timer_add(timer_tick, 50)
+
 
 def script_unload():
-    """
-    Called when the script is unloaded.
+    stop_monitors()
+    obs.timer_remove(timer_tick)
+    print("Mouse monitor script unloaded.")
 
-    Stops all active mouse listeners.
-    """
-    global click_monitor, position_monitor, scroll_monitor, scroll_timer
-        
+
+def stop_monitors():
+    global click_monitor, position_monitor, scroll_monitor
+    
     if click_monitor:
         click_monitor.stop()
-    click_monitor = None
+        click_monitor = None
 
     if position_monitor:
         position_monitor.stop()
-    position_monitor = None
+        position_monitor = None
 
     if scroll_monitor:
         scroll_monitor.stop()
-    scroll_monitor = None
+        scroll_monitor = None
 
-    if scroll_timer:
-        scroll_timer.cancel()
-    scroll_timer = None
-    
 
 def script_update(settings):
-    """
-    Called when the script settings are updated.
-
-    Reloads the script with the new settings.
-
-    Args:
-        settings (obspython.obs_data_t): The settings data object.
-    """
     script_load(settings)
