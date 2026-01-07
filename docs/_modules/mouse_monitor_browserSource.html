@@ -34,6 +34,7 @@
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">obspython</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">obs</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pynput</span><span class="w"> </span><span class="kn">import</span> <span class="n">mouse</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Timer</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Mouse Monitor Browser Source Script for OBS Studio</span>
@@ -58,6 +59,7 @@
 
 <span class="n">scroll_source_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 <span class="n">scroll_monitor</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">scroll_timer</span> <span class="o">=</span> <span class="kc">None</span>
 
 <span class="c1"># Defaults</span>
 <span class="n">DEFAULT_SOURCE_NAME</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
@@ -113,6 +115,32 @@
 
 
 
+<div class="viewcode-block" id="reset_scroll">
+<a class="viewcode-back" href="../mouse_monitor_browserSource.html#mouse_monitor_browserSource.reset_scroll">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reset_scroll</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resets the scroll values to 0 with smoothing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">scroll_timer</span>
+    
+    <span class="n">smoothing_factor</span> <span class="o">=</span> <span class="mf">0.9</span>
+    <span class="n">new_dx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">smoothing_factor</span><span class="p">)</span>
+    <span class="n">new_dy</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dy</span> <span class="o">*</span> <span class="n">smoothing_factor</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">),</span>
+        <span class="s2">&quot;dx&quot;</span><span class="p">:</span> <span class="n">new_dx</span><span class="p">,</span>
+        <span class="s2">&quot;dy&quot;</span><span class="p">:</span> <span class="n">new_dy</span>
+    <span class="p">}</span>
+    <span class="n">update_browser_source</span><span class="p">(</span><span class="n">scroll_source_name</span><span class="p">,</span> <span class="s2">&quot;MouseScroll&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">new_dx</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">new_dy</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">scroll_timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">reset_scroll</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">new_dx</span><span class="p">,</span> <span class="n">new_dy</span><span class="p">])</span>
+        <span class="n">scroll_timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+
+
 <div class="viewcode-block" id="on_scroll">
 <a class="viewcode-back" href="../mouse_monitor_browserSource.html#mouse_monitor_browserSource.on_scroll">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">on_scroll</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">):</span>
@@ -125,13 +153,21 @@
 <span class="sd">        dx (int): The horizontal scroll delta.</span>
 <span class="sd">        dy (int): The vertical scroll delta.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">scroll_timer</span>
+    
     <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
         <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">),</span>
         <span class="s2">&quot;dx&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">dx</span><span class="p">),</span>
         <span class="s2">&quot;dy&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span>
     <span class="p">}</span>
-    <span class="n">update_browser_source</span><span class="p">(</span><span class="n">scroll_source_name</span><span class="p">,</span> <span class="s2">&quot;MouseScroll&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+    <span class="n">update_browser_source</span><span class="p">(</span><span class="n">scroll_source_name</span><span class="p">,</span> <span class="s2">&quot;MouseScroll&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">scroll_timer</span><span class="p">:</span>
+        <span class="n">scroll_timer</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+    
+    <span class="n">scroll_timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">reset_scroll</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">])</span>
+    <span class="n">scroll_timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
 
 
 
@@ -297,7 +333,7 @@
 
 <span class="sd">    Stops all active mouse listeners.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">global</span> <span class="n">click_monitor</span><span class="p">,</span> <span class="n">position_monitor</span><span class="p">,</span> <span class="n">scroll_monitor</span>
+    <span class="k">global</span> <span class="n">click_monitor</span><span class="p">,</span> <span class="n">position_monitor</span><span class="p">,</span> <span class="n">scroll_monitor</span><span class="p">,</span> <span class="n">scroll_timer</span>
         
     <span class="k">if</span> <span class="n">click_monitor</span><span class="p">:</span>
         <span class="n">click_monitor</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
@@ -309,7 +345,11 @@
 
     <span class="k">if</span> <span class="n">scroll_monitor</span><span class="p">:</span>
         <span class="n">scroll_monitor</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-    <span class="n">scroll_monitor</span> <span class="o">=</span> <span class="kc">None</span></div>
+    <span class="n">scroll_monitor</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">scroll_timer</span><span class="p">:</span>
+        <span class="n">scroll_timer</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+    <span class="n">scroll_timer</span> <span class="o">=</span> <span class="kc">None</span></div>
 
     
 

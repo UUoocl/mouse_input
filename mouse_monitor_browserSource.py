@@ -1,6 +1,7 @@
 import obspython as obs
 from pynput import mouse
 import json
+from threading import Timer
 
 """
 Mouse Monitor Browser Source Script for OBS Studio
@@ -25,6 +26,7 @@ position_monitor = None
 
 scroll_source_name = ""
 scroll_monitor = None
+scroll_timer = None
 
 # Defaults
 DEFAULT_SOURCE_NAME = ""
@@ -74,6 +76,29 @@ def on_move(x, y):
     update_browser_source(position_source_name, "MouseMove", data)
 
 
+def reset_scroll(x, y, dx, dy):
+    """
+    Resets the scroll values to 0 with smoothing.
+    """
+    global scroll_timer
+    
+    smoothing_factor = 0.9
+    new_dx = int(dx * smoothing_factor)
+    new_dy = int(dy * smoothing_factor)
+
+    data = {
+        "x": int(x),
+        "y": int(y),
+        "dx": new_dx,
+        "dy": new_dy
+    }
+    update_browser_source(scroll_source_name, "MouseScroll", data)
+
+    if new_dx != 0 or new_dy != 0:
+        scroll_timer = Timer(0.05, reset_scroll, [x, y, new_dx, new_dy])
+        scroll_timer.start()
+
+
 def on_scroll(x, y, dx, dy):
     """
     Callback function for mouse scroll events.
@@ -84,6 +109,8 @@ def on_scroll(x, y, dx, dy):
         dx (int): The horizontal scroll delta.
         dy (int): The vertical scroll delta.
     """
+    global scroll_timer
+    
     data = {
         "x": int(x),
         "y": int(y),
@@ -91,6 +118,12 @@ def on_scroll(x, y, dx, dy):
         "dy": int(dy)
     }
     update_browser_source(scroll_source_name, "MouseScroll", data)
+
+    if scroll_timer:
+        scroll_timer.cancel()
+    
+    scroll_timer = Timer(0.1, reset_scroll, [x, y, dx, dy])
+    scroll_timer.start()
 
 
 def update_browser_source(source_name, event_name, data):
@@ -238,7 +271,7 @@ def script_unload():
 
     Stops all active mouse listeners.
     """
-    global click_monitor, position_monitor, scroll_monitor
+    global click_monitor, position_monitor, scroll_monitor, scroll_timer
         
     if click_monitor:
         click_monitor.stop()
@@ -251,6 +284,10 @@ def script_unload():
     if scroll_monitor:
         scroll_monitor.stop()
     scroll_monitor = None
+
+    if scroll_timer:
+        scroll_timer.cancel()
+    scroll_timer = None
     
 
 def script_update(settings):

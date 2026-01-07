@@ -67,7 +67,8 @@
 - Uses the <cite>pynput</cite> library to listen for global mouse events (clicks, movement, scrolling).
 - Integrates with the OBS Studio API (<cite>obspython</cite>) to create a script interface.
 - Allows users to select specific OBS Browser Sources to receive event data.
-- Dispatches custom <cite>javascript_event</cite> calls to the selected Browser Sources containing event details (coordinates, button state, scroll delta).</p></li>
+- Dispatches custom <cite>javascript_event</cite> calls to the selected Browser Sources containing event details (coordinates, button state, scroll delta).
+- <strong>New:</strong> Implements a smoothing algorithm for scroll value resets to provide a more natural visual decay when scrolling stops.</p></li>
 <li><p><strong>Frontend (`mouse_monitor.html`):</strong>
 - A styled HTML page intended to be loaded as a Browser Source in OBS.
 - Listens for the custom events dispatched by the Python script.

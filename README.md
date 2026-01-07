@@ -32,7 +32,7 @@ created with Google Gemini CLI
 
 This project follows a producer-consumer architecture designed to bridge system-level input with web-level visualization:
 
-1.  **Producer (Python):** `mouse_monitor_browserSource.py` uses `pynput` to capture global mouse events. It uses the OBS `javascript_event` API to dispatch these events into the Browser Source context.
+1.  **Producer (Python):** `mouse_monitor_browserSource.py` uses `pynput` to capture global mouse events. It uses the OBS `javascript_event` API to dispatch these events into the Browser Source context. It also includes a smoothing algorithm to naturally decay scroll values to zero.
 2.  **Bridge (HTML/JS):** `mouse_monitor.html` listens for these custom DOM events. It updates its own UI and simultaneously broadcasts the data using the **BroadcastChannel API**.
 3.  **Consumer (External):** `listener.html` demonstrates how any other page on the same origin can subscribe to these channels (`mouse_click`, `mouse_move`, `mouse_scroll`) to react to mouse input independently of the main visualization.
 

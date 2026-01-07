@@ -27,6 +27,7 @@ Functionality
    - Integrates with the OBS Studio API (`obspython`) to create a script interface.
    - Allows users to select specific OBS Browser Sources to receive event data.
    - Dispatches custom `javascript_event` calls to the selected Browser Sources containing event details (coordinates, button state, scroll delta).
+   - **New:** Implements a smoothing algorithm for scroll value resets to provide a more natural visual decay when scrolling stops.
 
 2. **Frontend (`mouse_monitor.html`):**
    - A styled HTML page intended to be loaded as a Browser Source in OBS.
